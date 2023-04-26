@@ -9,6 +9,7 @@ class GridCell:
         self.n_particles = 0
         self.u = x
         self.v = y
+        self.particles = []
 
 
 
