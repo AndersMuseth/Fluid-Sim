@@ -4,7 +4,8 @@ from mpl_toolkits import mplot3d
 from tqdm import tqdm
 import particle
 import grid_cell
-
+import mac_grid_face
+import Grid
 
 n_steps = 10
 max_particles = 100
@@ -21,8 +22,8 @@ time_step = 0.01
 time_steps = 3000
 damping_coef = -0.9
 
-grid_cells = \
-    np.array([[[grid_cell.Grid_Cell() for i in range(num_cells)]for j in range(num_cells)] for k in range(num_cells)])
+grid = Grid.Grid(num_cells, cell_size)
+grid_cells = grid.grid_cells
 particles = np.array([particle.Particle(20.0 + 10 * i, 50.0, 50.0, 0.0, 0.0, 0.0) for i in range(6)])
 for i in particles:
     px = i.pos[0] // cell_size
@@ -30,8 +31,9 @@ for i in particles:
     pz = i.pos[2] // cell_size
     i.grid = grid_cells[int(px)][int(py)][int(pz)]
     i.grid.particles.append(i)
-    print(grid_cells[int(px)][int(py)][int(pz)])
-
+print(np.array(grid.x_grid_faces).shape)
+print(np.array(grid.y_grid_faces).shape)
+print(np.array(grid.z_grid_faces).shape)
 
 def integrate_particles(dt, gravity):
     for i in particles:
@@ -45,6 +47,7 @@ def integrate_particles(dt, gravity):
             i.grid.particles.remove(i)
             i.grid = grid_cells[p_x][p_y][p_z]
             i.grid.particles.append(i)
+
 
 def handle_out_of_bounds():
     tempx = [particles[i].pos[0] for i in range(len(particles))]
@@ -87,10 +90,6 @@ def main():
         plt.style.use("dark_background")
         integrate_particles(time_step, -9.8)
 
-
-
-
-
         handle_out_of_bounds()
 
         if t % plot_every == 0:
@@ -109,6 +108,7 @@ def main():
             plt.draw()
             plt.pause(0.0001)
             plt.clf()
+
 
 if __name__ == "__main__":
     main()
