@@ -35,6 +35,7 @@ print(np.array(grid.x_grid_faces).shape)
 print(np.array(grid.y_grid_faces).shape)
 print(np.array(grid.z_grid_faces).shape)
 
+
 def integrate_particles(dt, gravity):
     for i in particles:
         i.vel[1] += dt * gravity

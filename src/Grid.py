@@ -6,6 +6,9 @@ import mac_grid_face
 class Grid:
 
     def __init__(self, num_cells, cell_size):
+        """x_grid_faces is the faces in the staggered grid that effect the x velocities
+        y_grid_faces is the faces in the staggered grid that effect the y velocities
+        z_grid_faces is the faces in the staggered grid that effect the z velocities"""
         self.num_cells = num_cells
         self.cell_size = cell_size
         self.grid_cells = \
