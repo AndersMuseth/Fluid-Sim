@@ -5,6 +5,7 @@ from tqdm import tqdm
 import particle_2d
 import grid_2d
 
+n_steps = 10
 max_particles = 100
 num_cells = 50
 cell_size = 2
@@ -179,16 +180,17 @@ def handle_out_of_bounds():
 
 
 def force_incompress():
-    for i in range(num_cells):
-        for j in range(num_cells):
-            d = overRelaxation * (c_v[i, j + 1] - c_v[i, j] + c_u[i + 1, j] - c_u[i, j])
-            s = (s_v[i, j + 1] + s_v[i, j] + s_u[i + 1, j] + s_u[i, j])
-            # if(s == 0):
-            #    print("hey I'm zero")
-            c_u[i + 1, j] -= d / 4
-            c_u[i, j] += d / 4
-            c_v[i + 1, j] -= d / 4
-            c_v[i, j] += d / 4
+    for _ in range(n_steps):
+        for i in range(num_cells):
+            for j in range(num_cells):
+                d = (c_v[i, j + 1] - c_v[i, j] + c_u[i + 1, j] - c_u[i, j])
+                s = (s_v[i, j + 1] + s_v[i, j] + s_u[i + 1, j] + s_u[i, j])
+                # if(s == 0):
+                #    print("hey I'm zero")
+                c_u[i + 1, j] -= d / 4
+                c_u[i, j] += d / 4
+                c_v[i + 1, j] -= d / 4
+                c_v[i, j] += d / 4
 
 
 def set_zeros():
@@ -212,7 +214,7 @@ def main():
 
         norm_r()
 
-        #force_incompress()
+        force_incompress()
 
         for p in particles:
             vel_change = gtp(p)

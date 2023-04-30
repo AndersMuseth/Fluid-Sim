@@ -21,7 +21,7 @@ damping_coef = - 0.9
 g = np.array([[0, -0.1]])
 
 figure_size = (4,6)
-plot_every = 10
+plot_every = 5
 scatter_dot_size = 2000
 
 domain_x_lim = np.array([smoothness_len, domain_width - smoothness_len])
@@ -49,9 +49,9 @@ def main():
     positions = np.zeros((n_particles, 2))
     velocities = np.zeros((n_particles, 2))
     forces = np.zeros((n_particles, 2))
-    metadata = dict(title="spf_2d", artist="matlib", comment='')
+    metadata = dict(title="sph_2d", artist="matlib", comment='')
     writer = FFMpegWriter(fps=15, metadata=metadata)
-    filename = "spf_2d.mp4"
+    filename = "sph_2d.mp4"
     plt.style.use("dark_background")
     fig = plt.figure(figsize=figure_size, dpi=160)
     with writer.saving(fig, filename, dpi=160):
