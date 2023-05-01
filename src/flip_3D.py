@@ -85,6 +85,28 @@ def handle_out_of_bounds():
         p.vel[2] *= damping_coef
         p.pos[2] = domain_z_lim[1]
 
+#particle to grid for one particle
+def ptg(p, grid):
+    x, y, z = p.pos[0], p.pos[1], p.pos[2]
+    vx, vy, vz = p.vel[0], p.vel[1], p.vel[2]
+    m = p.m
+
+    # Calculate weights
+    i, j, k = int(x / cell_size), int(y / cell_size), int(z / cell_size)
+    fx, fy, fz = (x / cell_size) - i, (y / cell_size) - j, (z / cell_size) - k
+
+    # Use weights to update particle on grid
+    v = np.array([vx, vy, vz])
+    grid[i, j, k] += (1 - fx) * (1 - fy) * (1 - fz) * v * m
+    grid[i+1, j, k] += fx * (1 - fy) * (1 - fz) * v * m
+    grid[i, j+1, k] += (1 - fx) * fy * (1 - fz) * v * m
+    grid[i, j, k+1] += (1 - fx) * (1 - fy) * fz * v * m
+    grid[i+1, j+1, k] += fx * fy * (1 - fz) * v * m
+    grid[i+1, j, k+1] += fx * (1 - fy) * fz * v * m
+    grid[i, j+1, k+1] += (1 - fx) * fy * fz * v * m
+    grid[i+1, j+1, k+1] += fx * fy * fz * v * m
+
+
 
 def main():
     for t in tqdm(range(time_steps)):
