@@ -266,6 +266,7 @@ def main():
         integrate_particles(time_step, -9.8)
 
         handle_out_of_bounds()
+        
 
         if t % plot_every == 0:
             ax = plt.axes(projection="3d")
