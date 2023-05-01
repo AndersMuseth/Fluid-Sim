@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
+from matplotlib.animation import FFMpegWriter
 from tqdm import tqdm
 import particle
 import grid_cell
@@ -10,21 +11,23 @@ import Grid
 n_steps = 10
 max_particles = 100
 num_cells = 50
-cell_size = 2
+cell_size = 1
 overRelaxation = 1.9
 rest_density = 0
-plot_every = 10
+plot_every = 5
 scatter_dot_size = 50
-domain_x_lim = np.array([1, num_cells * cell_size - 1])
-domain_y_lim = np.array([1, num_cells * cell_size - 1])
-domain_z_lim = np.array([1, num_cells * cell_size - 1])
+domain_x_lim = np.array([0, num_cells * cell_size - cell_size])
+domain_y_lim = np.array([0, num_cells * cell_size - cell_size])
+domain_z_lim = np.array([0, num_cells * cell_size - cell_size])
 time_step = 0.01
 time_steps = 3000
-damping_coef = -0.9
+damping_coef = -0.1
+n_iters = 10
+new_p_every = 10
 
 grid = Grid.Grid(num_cells, cell_size)
 grid_cells = grid.grid_cells
-particles = np.array([particle.Particle(20.0 + 10 * i, 50.0, 50.0, 0.0, 0.0, 0.0) for i in range(6)])
+particles = []  # [particle.Particle(20.0 + 10 * i, 50.0, 50.0, 0.0, 0.0, 0.0) for i in range(6)]
 for i in particles:
     px = i.pos[0] // cell_size
     py = i.pos[1] // cell_size
@@ -34,21 +37,6 @@ for i in particles:
 print(np.array(grid.x_grid_faces).shape)
 print(np.array(grid.y_grid_faces).shape)
 print(np.array(grid.z_grid_faces).shape)
-
-
-def integrate_particles(dt, gravity):
-    for i in particles:
-        i.vel[1] += dt * gravity
-        i.pos += i.vel * dt
-        # print(i.pos[0])
-        p_x = int(i.pos[0] // cell_size)
-        p_y = int(i.pos[1] // cell_size)
-        p_z = int(i.pos[2] // cell_size)
-        # print(p_x, p_y, p_z)
-        if i.grid != grid_cells[p_x][p_y][p_z]:
-            i.grid.particles.remove(i)
-            i.grid = grid_cells[p_x][p_y][p_z]
-            i.grid.particles.append(i)
 
 
 def handle_out_of_bounds():
@@ -61,32 +49,90 @@ def handle_out_of_bounds():
     out_of_top = tempy > domain_y_lim[1]
     out_of_nz = tempz < domain_z_lim[0]
     out_of_pz = tempz > domain_z_lim[1]
-
-    for p in particles[out_of_left]:
+    particlesnp = np.array(particles)
+    for p in particlesnp[out_of_left]:
         p.vel[0] *= damping_coef
         p.pos[0] = domain_x_lim[0]
 
-    for p in particles[out_of_right]:
+    for p in particlesnp[out_of_right]:
         p.vel[0] *= damping_coef
         p.pos[0] = domain_x_lim[1]
 
-    for p in particles[out_of_bottom]:
+    for p in particlesnp[out_of_bottom]:
         p.vel[1] *= damping_coef
         p.pos[1] = domain_y_lim[0]
 
-    for p in particles[out_of_top]:
+    for p in particlesnp[out_of_top]:
         p.vel[1] *= damping_coef
         p.pos[1] = domain_y_lim[1]
 
-    for p in particles[out_of_nz]:
+    for p in particlesnp[out_of_nz]:
         p.vel[2] *= damping_coef
         p.pos[2] = domain_z_lim[0]
 
-    for p in particles[out_of_pz]:
+    for p in particlesnp[out_of_pz]:
         p.vel[2] *= damping_coef
         p.pos[2] = domain_z_lim[1]
 
-#particle to grid for one particle
+
+def integrate_particles(dt, gravity):
+    for i in particles:
+        i.vel[1] += dt * gravity
+        i.pos += i.vel * dt
+        # print(i.pos[0])
+
+
+def update_grids():
+    for i in particles:
+        p_x = int(i.pos[0] // cell_size)
+        p_y = int(i.pos[1] // cell_size)
+        p_z = int(i.pos[2] // cell_size)
+        # print(p_x, p_y, p_z)
+        if i.grid != grid_cells[p_x][p_y][p_z]:
+            i.grid.particles.remove(i)
+            i.grid = grid_cells[p_x][p_y][p_z]
+            i.grid.particles.append(i)
+
+
+def clear_faces():
+    def clear_grid_face(pos, offset, grid_faces):
+        q_indices = [(0, 0, 0), (0, 1, 0), (0, 1, 1), (0, 0, 1), (1, 0, 0), (1, 1, 0), (1, 1, 1), (1, 0, 1)]
+        q1_i = ((pos - offset) // cell_size).astype(int)
+        dxyz = pos - (q1_i * cell_size + offset)
+        q1_i = tuple(q1_i)
+
+        for i, q_idx in enumerate(q_indices):
+            t = tuple(np.array(q1_i) + np.array(q_idx))
+            grid_faces[t].v = 0
+            grid_faces[t].r = 0
+
+    for p in particles:
+        clear_grid_face(p.pos, np.array([0, cell_size / 2, cell_size / 2]), grid.x_grid_faces)
+        clear_grid_face(p.pos, np.array([cell_size / 2, 0, cell_size / 2]), grid.y_grid_faces)
+        clear_grid_face(p.pos, np.array([cell_size / 2, cell_size / 2, 0]), grid.z_grid_faces)
+
+
+def r_divide():
+    def r_divide_face(pos, offset, grid_faces):
+        q_indices = [(0, 0, 0), (0, 1, 0), (0, 1, 1), (0, 0, 1), (1, 0, 0), (1, 1, 0), (1, 1, 1), (1, 0, 1)]
+        q1_i = ((pos - offset) // cell_size).astype(int)
+        dxyz = pos - (q1_i * cell_size + offset)
+        q1_i = tuple(q1_i)
+
+        for i, q_idx in enumerate(q_indices):
+            t = tuple(np.array(q1_i) + np.array(q_idx))
+            if grid_faces[t].r == 0:
+                grid_faces[t].v = 0
+            else:
+                grid_faces[t].v /= grid_faces[t].r
+
+    for p in particles:
+        r_divide_face(p.pos, np.array([0, cell_size / 2, cell_size / 2]), grid.x_grid_faces)
+        r_divide_face(p.pos, np.array([cell_size / 2, 0, cell_size / 2]), grid.y_grid_faces)
+        r_divide_face(p.pos, np.array([cell_size / 2, cell_size / 2, 0]), grid.z_grid_faces)
+
+
+# particle to grid for one particle
 def ptg(p, grid):
     x, y, z = p.pos[0], p.pos[1], p.pos[2]
     vx, vy, vz = p.vel[0], p.vel[1], p.vel[2]
@@ -99,14 +145,34 @@ def ptg(p, grid):
     # Use weights to update particle on grid
     v = np.array([vx, vy, vz])
     grid[i, j, k] += (1 - fx) * (1 - fy) * (1 - fz) * v * m
-    grid[i+1, j, k] += fx * (1 - fy) * (1 - fz) * v * m
-    grid[i, j+1, k] += (1 - fx) * fy * (1 - fz) * v * m
-    grid[i, j, k+1] += (1 - fx) * (1 - fy) * fz * v * m
-    grid[i+1, j+1, k] += fx * fy * (1 - fz) * v * m
-    grid[i+1, j, k+1] += fx * (1 - fy) * fz * v * m
-    grid[i, j+1, k+1] += (1 - fx) * fy * fz * v * m
-    grid[i+1, j+1, k+1] += fx * fy * fz * v * m
+    grid[i + 1, j, k] += fx * (1 - fy) * (1 - fz) * v * m
+    grid[i, j + 1, k] += (1 - fx) * fy * (1 - fz) * v * m
+    grid[i, j, k + 1] += (1 - fx) * (1 - fy) * fz * v * m
+    grid[i + 1, j + 1, k] += fx * fy * (1 - fz) * v * m
+    grid[i + 1, j, k + 1] += fx * (1 - fy) * fz * v * m
+    grid[i, j + 1, k + 1] += (1 - fx) * fy * fz * v * m
+    grid[i + 1, j + 1, k + 1] += fx * fy * fz * v * m
 
+
+def particle_to_grid(p):
+    def calc_weights_and_update_grid(pos, offset, grid_faces, vel):
+        q_indices = [(0, 0, 0), (0, 1, 0), (0, 1, 1), (0, 0, 1), (1, 0, 0), (1, 1, 0), (1, 1, 1), (1, 0, 1)]
+        q1_i = ((pos - offset) // cell_size).astype(int)
+        dxyz = pos - (q1_i * cell_size + offset)
+        q1_i = tuple(q1_i)
+
+        weights = np.zeros(8)
+        for i, q_idx in enumerate(q_indices):
+            weights[i] = (1 - (q_idx[0] * 1) - (-1 * q_idx[0]) * (dxyz[0] / cell_size)) * \
+                         (1 - (q_idx[1] * 1) - (-1 * q_idx[1]) * (dxyz[1] / cell_size)) * \
+                         (1 - (q_idx[2] * 1) - (-1 * q_idx[2]) * (dxyz[2] / cell_size))
+            t = tuple(np.array(q1_i) + np.array(q_idx))
+            grid_faces[t].v += weights[i] * vel
+            grid_faces[t].r += weights[i]
+
+    calc_weights_and_update_grid(p.pos, np.array([0, cell_size / 2, cell_size / 2]), grid.x_grid_faces, p.vel[0])
+    calc_weights_and_update_grid(p.pos, np.array([cell_size / 2, 0, cell_size / 2]), grid.y_grid_faces, p.vel[1])
+    calc_weights_and_update_grid(p.pos, np.array([cell_size / 2, cell_size / 2, 0]), grid.z_grid_faces, p.vel[2])
 
 
 def l_grid_to_particle(p):
@@ -261,8 +327,9 @@ def grid_to_particle(p):
         for i, q_idx in enumerate(q_indices):
             idx = tuple(np.array(q1_i) + np.array(q_idx))
             if not grid_faces[idx].is_undefined():
-                weights[i] = (1 - dxyz[0] / cell_size * q_idx[0]) * (1 - dxyz[1] / cell_size * q_idx[1]) * (
-                            1 - dxyz[2] / cell_size * q_idx[2])
+                weights[i] = (1 - (q_idx[0] * 1) - (-1 * q_idx[0]) * (dxyz[0] / cell_size)) * \
+                             (1 - (q_idx[1] * 1) - (-1 * q_idx[1]) * (dxyz[1] / cell_size)) * \
+                             (1 - (q_idx[2] * 1) - (-1 * q_idx[2]) * (dxyz[2] / cell_size))
 
         qp = sum(
             weights[i] * grid_faces[tuple(np.array(q1_i) + np.array(q_idx))].v for i, q_idx in enumerate(q_indices))
@@ -281,31 +348,79 @@ def grid_to_particle(p):
     return np.array([qpx, qpy, qpz])
 
 
+def force_incompression():
+    indx = set()
+    for p in particles:
+        p_x = int(p.pos[0] / cell_size)
+        p_y = int(p.pos[1] / cell_size)
+        p_z = int(p.pos[2] / cell_size)
+        indx.add((p_x, p_y, p_z))
+    for _ in range(n_iters):
+        for i in indx:
+            ind_1x = tuple(np.array(i) + np.array((1, 0, 0)))
+            ind_1y = tuple(np.array(i) + np.array((0, 1, 0)))
+            ind_1z = tuple(np.array(i) + np.array((0, 0, 1)))
+            d = grid.x_grid_faces[ind_1x].v - grid.x_grid_faces[i].v + \
+                grid.y_grid_faces[ind_1y].v - grid.y_grid_faces[i].v + \
+                grid.z_grid_faces[ind_1z].v - grid.z_grid_faces[i].v
+            # d *= overRelaxation
+            s = grid.x_grid_faces[ind_1x].s + grid.x_grid_faces[i].s + \
+                grid.y_grid_faces[ind_1y].s + grid.y_grid_faces[i].s + \
+                grid.z_grid_faces[ind_1z].s + grid.z_grid_faces[i].s
+            grid.x_grid_faces[i].v += d * grid.x_grid_faces[i].s / s
+            grid.x_grid_faces[ind_1x].v -= d * grid.x_grid_faces[ind_1x].s / s
+            grid.y_grid_faces[i].v += d * grid.y_grid_faces[i].s / s
+            grid.y_grid_faces[ind_1y].v -= d * grid.y_grid_faces[ind_1y].s / s
+            grid.z_grid_faces[i].v += d * grid.z_grid_faces[i].s / s
+            grid.z_grid_faces[ind_1z].v -= d * grid.z_grid_faces[ind_1z].s / s
+
+
 def main():
-    grid_to_particle(particles[0])
-    for t in tqdm(range(time_steps)):
-        plt.style.use("dark_background")
-        integrate_particles(time_step, -9.8)
+    # grid_to_particle(particles[0])
+    metadata = dict(title="sph_2d", artist="matlib", comment='')
+    writer = FFMpegWriter(fps=15, metadata=metadata)
+    filename = "sph_2d.mp4"
+    plt.style.use("dark_background")
+    fig = plt.figure()
+    with writer.saving(fig, filename, dpi=160):
+        for t in tqdm(range(time_steps)):
+            if t % new_p_every == 0 and t != 0:
+                new_p = particle.Particle(30.0 + 10 * np.random.rand(), 40.0, 10 * np.random.rand() + 40.0,
+                                          -2, 0.0, -2)
+                new_p.grid = \
+                    grid_cells[int(new_p.pos[0] / cell_size)][int(new_p.pos[1] / cell_size)][int(new_p.pos[0] / cell_size)]
+                new_p.grid.particles.append(new_p)
+                particles.append(new_p)
 
-        handle_out_of_bounds()
-        
+            integrate_particles(time_step, -9.8)
+            handle_out_of_bounds()
+            update_grids()
+            clear_faces()
+            for p in particles:
+                particle_to_grid(p)
+            r_divide()
+            force_incompression()
+            for p in particles:
+                p_v = grid_to_particle(p)
+                p.vel = p_v
 
-        if t % plot_every == 0:
-            ax = plt.axes(projection="3d")
-            ax.scatter(
-                [particles[i].pos[0] for i in range(len(particles))],
-                [particles[i].pos[2] for i in range(len(particles))],
-                [particles[i].pos[1] for i in range(len(particles))],
-                s=scatter_dot_size,
-                c=[particles[i].pos[1] for i in range(len(particles))],
-                cmap="Blues_r"
-            )
-            plt.xlim(domain_x_lim)
-            plt.ylim(domain_y_lim)
-            ax.set_zlim(domain_z_lim)
-            plt.draw()
-            plt.pause(0.0001)
-            plt.clf()
+            if t % plot_every == 0:
+                ax = plt.axes(projection="3d")
+                ax.scatter(
+                    [particles[i].pos[0] for i in range(len(particles))],
+                    [particles[i].pos[2] for i in range(len(particles))],
+                    [particles[i].pos[1] for i in range(len(particles))],
+                    s=scatter_dot_size,
+                    c=[particles[i].pos[1] for i in range(len(particles))],
+                    cmap="Blues_r"
+                )
+                plt.xlim(domain_x_lim)
+                plt.ylim(domain_y_lim)
+                ax.set_zlim(domain_z_lim)
+                #plt.draw()
+                plt.pause(0.0001)
+                writer.grab_frame()
+                plt.clf()
 
 
 if __name__ == "__main__":
