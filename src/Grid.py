@@ -15,7 +15,9 @@ class Grid:
             np.array([[[grid_cell.Grid_Cell() for i in range(num_cells)] for j in range(num_cells)] for k in
                       range(num_cells)])
         num_faces = num_cells + 1
-        self.x_grid_faces = [[[0] * num_cells] * num_cells] * num_faces
+        self.x_grid_faces = [[[0 for _ in range(num_cells)] for _ in range(num_cells)] for _ in range(num_faces)]
+        self.y_grid_faces = [[[0 for _ in range(num_cells)] for _ in range(num_faces)] for _ in range(num_cells)]
+        self.z_grid_faces = [[[0 for _ in range(num_faces)] for _ in range(num_cells)] for _ in range(num_cells)]
         for i in range(num_faces):
             for j in range(num_cells):
                 for k in range(num_cells):
@@ -26,7 +28,6 @@ class Grid:
                     else:
                         self.x_grid_faces[i][j][k] = mac_grid_face.Grid_Face(self.grid_cells[i - 1][j][k],
                                                                              self.grid_cells[i][j][k])
-        self.y_grid_faces = [[[0] * num_cells] * num_faces] * num_cells
         for i in range(num_cells):
             for j in range(num_faces):
                 for k in range(num_cells):
@@ -37,7 +38,6 @@ class Grid:
                     else:
                         self.y_grid_faces[i][j][k] = mac_grid_face.Grid_Face(self.grid_cells[i][j - 1][k],
                                                                              self.grid_cells[i][j][k])
-        self.z_grid_faces = [[[0] * num_faces] * num_cells] * num_cells
         for i in range(num_cells):
             for j in range(num_cells):
                 for k in range(num_faces):
@@ -48,5 +48,8 @@ class Grid:
                     else:
                         self.z_grid_faces[i][j][k] = mac_grid_face.Grid_Face(self.grid_cells[i][j][k - 1],
                                                                              self.grid_cells[i][j][k])
+        self.x_grid_faces = np.array(self.x_grid_faces)
+        self.y_grid_faces = np.array(self.y_grid_faces)
+        self.z_grid_faces = np.array(self.z_grid_faces)
 
 

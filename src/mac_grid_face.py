@@ -13,3 +13,8 @@ class Grid_Face:
         self.r = 0
         self.up = up_grid
         self.down = down_grid
+
+    def is_undefined(self):
+        if self.up is None or self.down is None:
+            return False
+        return len(self.up.particles) == 0 and len(self.down.particles) == 0
