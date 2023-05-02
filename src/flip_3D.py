@@ -21,13 +21,17 @@ domain_y_lim = np.array([0, num_cells * cell_size - cell_size])
 domain_z_lim = np.array([0, num_cells * cell_size - cell_size])
 time_step = 0.01
 time_steps = 3000
-damping_coef = -0.1
+damping_coef = 0
 n_iters = 10
 new_p_every = 10
 
 grid = Grid.Grid(num_cells, cell_size)
 grid_cells = grid.grid_cells
 particles = []  # [particle.Particle(20.0 + 10 * i, 50.0, 50.0, 0.0, 0.0, 0.0) for i in range(6)]
+for i in range(5):
+    for j in range(5):
+        for k in range(5):
+            particles.append(particle.Particle(25.0 + 2 * i, 25.0 + 2 * j, 25.0 + 2 * k, 0.0, 0.0, 0.0))
 for i in particles:
     px = i.pos[0] // cell_size
     py = i.pos[1] // cell_size
@@ -113,6 +117,8 @@ def clear_faces():
 
 
 def r_divide():
+    epsilon = 1e-8
+
     def r_divide_face(pos, offset, grid_faces):
         q_indices = [(0, 0, 0), (0, 1, 0), (0, 1, 1), (0, 0, 1), (1, 0, 0), (1, 1, 0), (1, 1, 1), (1, 0, 1)]
         q1_i = ((pos - offset) // cell_size).astype(int)
@@ -124,7 +130,7 @@ def r_divide():
             if grid_faces[t].r == 0:
                 grid_faces[t].v = 0
             else:
-                grid_faces[t].v /= grid_faces[t].r
+                grid_faces[t].v /= grid_faces[t].r + epsilon
 
     for p in particles:
         r_divide_face(p.pos, np.array([0, cell_size / 2, cell_size / 2]), grid.x_grid_faces)
@@ -317,6 +323,8 @@ def l_grid_to_particle(p):
 
 
 def grid_to_particle(p):
+    epsilon = 1e-8
+
     def calc_weights_and_interp(pos, offset, grid_faces):
         q_indices = [(0, 0, 0), (0, 1, 0), (0, 1, 1), (0, 0, 1), (1, 0, 0), (1, 1, 0), (1, 1, 1), (1, 0, 1)]
         q1_i = ((pos - offset) // cell_size).astype(int)
@@ -335,7 +343,7 @@ def grid_to_particle(p):
             weights[i] * grid_faces[tuple(np.array(q1_i) + np.array(q_idx))].v for i, q_idx in enumerate(q_indices))
         total_weights = np.sum(weights)
         if total_weights != 0:
-            qp /= total_weights
+            qp /= total_weights + epsilon
         else:
             qp = 0
 
@@ -379,30 +387,35 @@ def main():
     # grid_to_particle(particles[0])
     metadata = dict(title="sph_2d", artist="matlib", comment='')
     writer = FFMpegWriter(fps=15, metadata=metadata)
-    filename = "sph_2d.mp4"
+    filename = "flip_cube.mp4"
     plt.style.use("dark_background")
     fig = plt.figure()
     with writer.saving(fig, filename, dpi=160):
         for t in tqdm(range(time_steps)):
-            if t % new_p_every == 0 and t != 0:
-                new_p = particle.Particle(30.0 + 10 * np.random.rand(), 40.0, 10 * np.random.rand() + 40.0,
-                                          -2, 0.0, -2)
-                new_p.grid = \
-                    grid_cells[int(new_p.pos[0] / cell_size)][int(new_p.pos[1] / cell_size)][int(new_p.pos[0] / cell_size)]
-                new_p.grid.particles.append(new_p)
-                particles.append(new_p)
+            # if t % new_p_every == 0 and t != 0:
+            # new_p = particle.Particle(30.0 + 10 * np.random.rand(), 40.0, 10 * np.random.rand() + 40.0,
+            #                          -10, 0.0, -10)
+            # new_p.grid = \
+            #    grid_cells[int(new_p.pos[0] / cell_size)][int(new_p.pos[1] / cell_size)][int(new_p.pos[0] / cell_size)]
+            # new_p.grid.particles.append(new_p)
+            # particles.append(new_p)
 
             integrate_particles(time_step, -9.8)
+
             handle_out_of_bounds()
             update_grids()
             clear_faces()
             for p in particles:
                 particle_to_grid(p)
+                if np.isnan(p.pos[0]) or np.isnan(p.pos[1]) and np.isnan(p.pos[2].isnan):
+                    print(p.pos)
             r_divide()
             force_incompression()
             for p in particles:
                 p_v = grid_to_particle(p)
                 p.vel = p_v
+                if np.isnan(p.pos[0]) or np.isnan(p.pos[1]) and np.isnan(p.pos[2].isnan):
+                    print(p.pos, "gtp")
 
             if t % plot_every == 0:
                 ax = plt.axes(projection="3d")
@@ -417,7 +430,7 @@ def main():
                 plt.xlim(domain_x_lim)
                 plt.ylim(domain_y_lim)
                 ax.set_zlim(domain_z_lim)
-                #plt.draw()
+                # plt.draw()
                 plt.pause(0.0001)
                 writer.grab_frame()
                 plt.clf()
