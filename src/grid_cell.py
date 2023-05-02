@@ -4,3 +4,4 @@ class Grid_Cell:
 
     def __init__(self):
         self.particles = []
+        self.density = 0
