@@ -377,6 +377,7 @@ def main():
                 ax.xaxis._axinfo["grid"]['color'] =  (1,1,1,0)
                 ax.yaxis._axinfo["grid"]['color'] =  (1,1,1,0)
                 ax.zaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+                ax.set_axis_off()
 
                 ax.scatter(
                     [particles[i].pos[0] for i in range(len(particles))],
