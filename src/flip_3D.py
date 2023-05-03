@@ -31,21 +31,21 @@ grid = Grid.Grid(num_cells, cell_size)
 grid_cells = grid.grid_cells
 print(grid_cells[0, 1, 2].s, grid_cells[1, 1, 2].s, grid_cells[num_cells - 1, 1, 2].s)
 particles = []  # [particle.Particle(20.0 + 10 * i, 50.0, 50.0, 0.0, 0.0, 0.0) for i in range(6)]
-for i in range(10):
-    for j in range(10):
-        for k in range(10):
+for i in range(5):
+    for j in range(5):
+        for k in range(5):
             particles.append(particle.Particle(7.5 + 1 * i, 10.5 + 1 * j, 7.5 + 1 * k, 0.0, -20.0, 0.0))
-for i in range(10):
-    for j in range(10):
-        for k in range(10):
+for i in range(5):
+    for j in range(5):
+        for k in range(5):
             particles.append(particle.Particle(7.5 + 1 * i, 10.0 + 1 * j, 7.0 + 1 * k, 0.0, -20.0, 0.0))
-for i in range(10):
-    for j in range(10):
-        for k in range(10):
+for i in range(5):
+    for j in range(5):
+        for k in range(5):
             particles.append(particle.Particle(7.0 + 1 * i, 10.0 + 1 * j, 7.5 + 1 * k, 0.0, -20.0, 0.0))
-for i in range(10):
-    for j in range(10):
-        for k in range(10):
+for i in range(5):
+    for j in range(5):
+        for k in range(5):
             particles.append(particle.Particle(7.5 + 1 * i, 10.0 + 1 * j, 7.5 + 1 * k, 0.0, -20.0, 0.0))
 #for i in range(4):
 #    for j in range(4):
@@ -311,7 +311,7 @@ def main():
     # grid_to_particle(particles[0])
     metadata = dict(title="sph_2d", artist="matlib", comment='')
     writer = FFMpegWriter(fps=15, metadata=metadata)
-    filename = "flip_test6.mp4"
+    filename = "flip_test6_nobg.mp4"
     plt.style.use("dark_background")
     fig = plt.figure()
     calculate_density()
@@ -368,6 +368,16 @@ def main():
                     print(p.pos, "gtp")
             if t % plot_every == 0:
                 ax = plt.axes(projection="3d")
+
+                # make the panes transparent
+                ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+                ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+                ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+                # make the grid lines transparent
+                ax.xaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+                ax.yaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+                ax.zaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+
                 ax.scatter(
                     [particles[i].pos[0] for i in range(len(particles))],
                     [particles[i].pos[2] for i in range(len(particles))],
