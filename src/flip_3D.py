@@ -11,29 +11,29 @@ import Grid
 
 n_steps = 10
 max_particles = 100
-num_cells = 50
-cell_size = 1
+num_cells = 20
+cell_size = 0.5
 overRelaxation = 1.9
 rest_density = [0]
 plot_every = 5
 scatter_dot_size = 50
-domain_x_lim = np.array([0, num_cells * cell_size - cell_size])
-domain_y_lim = np.array([0, num_cells * cell_size - cell_size])
-domain_z_lim = np.array([0, num_cells * cell_size - cell_size])
+domain_x_lim = np.array([1, num_cells * cell_size - 1])
+domain_y_lim = np.array([1, num_cells * cell_size - 1])
+domain_z_lim = np.array([1, num_cells * cell_size - 1])
 time_step = 0.01
 time_steps = 3000
-damping_coef = 0
-n_iters = 10
-new_p_every = 10
-particle_radius = cell_size / 2
+damping_coef = -0.5
+n_iters = 20
+new_p_every = 5
+particle_radius = cell_size / 5
 
 grid = Grid.Grid(num_cells, cell_size)
 grid_cells = grid.grid_cells
 particles = []  # [particle.Particle(20.0 + 10 * i, 50.0, 50.0, 0.0, 0.0, 0.0) for i in range(6)]
-#for i in range(5):
-#    for j in range(5):
-#        for k in range(5):
-#            particles.append(particle.Particle(25.0 + 2 * i, 25.0 + 2 * j, 25.0 + 2 * k, 0.0, 0.0, 0.0))
+for i in range(5):
+    for j in range(5):
+        for k in range(5):
+            particles.append(particle.Particle(3.5 + 0.5 * i, 6.5 + 0.5 * j, 3.5 + 0.5 * k, 0.0, 0.0, 0.0))
 for i in particles:
     px = i.pos[0] // cell_size
     py = i.pos[1] // cell_size
@@ -84,7 +84,7 @@ def handle_out_of_bounds():
 def integrate_particles(dt, gravity):
     for i in particles:
         i.vel[1] += dt * gravity
-        i.vel[i.vel > 30] = 30
+        #i.vel[i.vel > 30] = 30
         i.pos += i.vel * dt
         # print(i.pos[0])
 
@@ -373,19 +373,22 @@ def force_incompression():
             ind_1x = tuple(np.array(i) + np.array((1, 0, 0)))
             ind_1y = tuple(np.array(i) + np.array((0, 1, 0)))
             ind_1z = tuple(np.array(i) + np.array((0, 0, 1)))
+            ind_n1x = tuple(np.array(i) + np.array((-1, 0, 0)))
+            ind_n1y = tuple(np.array(i) + np.array((0, -1, 0)))
+            ind_n1z = tuple(np.array(i) + np.array((0, 0, -1)))
             d = grid.x_grid_faces[ind_1x].v - grid.x_grid_faces[i].v + \
                 grid.y_grid_faces[ind_1y].v - grid.y_grid_faces[i].v + \
                 grid.z_grid_faces[ind_1z].v - grid.z_grid_faces[i].v
             d *= overRelaxation
-            #d -= grid_cells[i].density - rest_density[0]
-            s = grid.x_grid_faces[ind_1x].s + grid.x_grid_faces[i].s + \
-                grid.y_grid_faces[ind_1y].s + grid.y_grid_faces[i].s + \
-                grid.z_grid_faces[ind_1z].s + grid.z_grid_faces[i].s
-            grid.x_grid_faces[i].v += d * grid.x_grid_faces[i].s / s
+            d -= grid_cells[i].density - rest_density[0]
+            s = grid.x_grid_faces[ind_1x].s + grid.x_grid_faces[ind_n1x].s + \
+                grid.y_grid_faces[ind_1y].s + grid.y_grid_faces[ind_n1y].s + \
+                grid.z_grid_faces[ind_1z].s + grid.z_grid_faces[ind_n1z].s
+            grid.x_grid_faces[i].v += d * grid.x_grid_faces[ind_n1x].s / s
             grid.x_grid_faces[ind_1x].v -= d * grid.x_grid_faces[ind_1x].s / s
-            grid.y_grid_faces[i].v += d * grid.y_grid_faces[i].s / s
+            grid.y_grid_faces[i].v += d * grid.y_grid_faces[ind_n1y].s / s
             grid.y_grid_faces[ind_1y].v -= d * grid.y_grid_faces[ind_1y].s / s
-            grid.z_grid_faces[i].v += d * grid.z_grid_faces[i].s / s
+            grid.z_grid_faces[i].v += d * grid.z_grid_faces[ind_n1z].s / s
             grid.z_grid_faces[ind_1z].v -= d * grid.z_grid_faces[ind_1z].s / s
 
 
@@ -438,10 +441,10 @@ def separate_particles():
                     if 0 <= i + p_x < num_cells and 0 <= j + p_y < num_cells and 0 <= k + p_z < num_cells:
                         for p_c in grid_cells[p_x + i, p_y + j, p_z + k].particles:
                             l = LA.norm(p.pos - p_c.pos)
-                            if p != p_c and l < particle_radius:
+                            if p != p_c and l < 2 * particle_radius:
                                 dir = (p.pos - p_c.pos) / (l + epsilon)
-                                p.pos += dir * (particle_radius - l) / 2
-                                p_c.pos -= dir * (particle_radius - l) / 2
+                                p.pos += dir * (2 * particle_radius - l) / 2
+                                p_c.pos -= dir * (2 * particle_radius - l) / 2
 
 
 def main():
@@ -455,20 +458,24 @@ def main():
     sum_d = 0
     for p in particles:
         sum_d += p.grid.density
-    #rest_density[0] = sum_d / len(particles)
+    rest_density[0] = sum_d / len(particles)
     # rest_density[0] = 0
     with writer.saving(fig, filename, dpi=160):
     #if True:
         for t in tqdm(range(time_steps)):
 
-            if t % new_p_every == 0 and t != 0:
-                new_p = particle.Particle(30.0 + 10 * np.random.rand(), 40.0, 10 * np.random.rand() + 40.0,
-                                      -2, 0.0, -2)
-                new_p.grid = \
-                    grid_cells[int(new_p.pos[0] / cell_size)][int(new_p.pos[1] / cell_size)][
-                    int(new_p.pos[0] / cell_size)]
-                new_p.grid.particles.append(new_p)
-                particles.append(new_p)
+            #if t % new_p_every == 0:
+            #    new_p = particle.Particle(4 + 3 * np.random.rand(), 8.0, 4 * np.random.rand() + 3.0,
+            #                          0.0, 0.0, 0.0)
+            #    new_p.grid = \
+            #        grid_cells[int(new_p.pos[0] / cell_size)][int(new_p.pos[1] / cell_size)][
+            #        int(new_p.pos[0] / cell_size)]
+            #    new_p.grid.particles.append(new_p)
+            #    particles.append(new_p)
+            #    if len(particles) == 1:
+            #        for p in particles:
+            #            sum_d = p.grid.density
+            #            rest_density[0] = sum_d / len(particles)
 
             integrate_particles(time_step, -9.8)
             separate_particles()
@@ -483,7 +490,7 @@ def main():
             r_divide()
             #grid.r_div()
             #calculate_density()
-            force_incompression()
+            #force_incompression()
             for p in particles:
                 p_v = l_grid_to_particle(p)
                 p.vel = p_v
@@ -505,7 +512,7 @@ def main():
                 ax.set_zlim(domain_z_lim)
                 # plt.draw()
                 #plt.draw()
-                plt.pause(0.0001)
+                #plt.pause(0.0001)
                 writer.grab_frame()
                 plt.clf()
 
