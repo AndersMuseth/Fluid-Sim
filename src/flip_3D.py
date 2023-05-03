@@ -305,6 +305,9 @@ def separate_particles():
 
 
 def main():
+
+    position_sequence = []
+
     # grid_to_particle(particles[0])
     metadata = dict(title="sph_2d", artist="matlib", comment='')
     writer = FFMpegWriter(fps=15, metadata=metadata)
@@ -340,10 +343,16 @@ def main():
             update_grids()
             clear_faces()
             #grid.clear_faces()
+
+            particle_positions = []
             for p in particles:
+                particle_positions.append(p.pos)
                 particle_to_grid(p)
                 if np.isnan(p.pos[0]) or np.isnan(p.pos[1]) and np.isnan(p.pos[2].isnan):
                     print(p.pos)
+
+            position_sequence.append(np.array(particle_positions))
+
             r_divide()
             #grid.r_div()
             calculate_density()
@@ -376,6 +385,9 @@ def main():
                 writer.grab_frame()
                 plt.clf()
 
+                with open(f'{filename.split(".")[0]}.npy', 'wb') as f:
+                    np.save(f, np.array(position_sequence))
+                
 
 if __name__ == "__main__":
     main()
