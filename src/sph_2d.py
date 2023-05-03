@@ -17,7 +17,7 @@ isotropic_exp = 20
 base_density = 1
 p_mass = 1
 dynamic_viscosity = 0.5
-damping_coef = - 0.9
+damping_coef = 0
 g = np.array([[0, -0.1]])
 
 figure_size = (4,6)

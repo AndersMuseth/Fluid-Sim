@@ -12,8 +12,9 @@ class Grid:
         self.num_cells = num_cells
         self.cell_size = cell_size
         self.grid_cells = \
-            np.array([[[grid_cell.Grid_Cell() for i in range(num_cells)] for j in range(num_cells)] for k in
-                      range(num_cells)])
+            np.array([[[grid_cell.Grid_Cell(int(0 != i and 0 != j and 0 != k and i != num_cells - 1
+                                                and j != num_cells - 1 and k != num_cells - 1)) for i in range(num_cells)]
+                       for j in range(num_cells)] for k in range(num_cells)])
         num_faces = num_cells + 1
         self.x_grid_faces = [[[0 for _ in range(num_cells)] for _ in range(num_cells)] for _ in range(num_faces)]
         self.y_grid_faces = [[[0 for _ in range(num_cells)] for _ in range(num_faces)] for _ in range(num_cells)]
@@ -63,6 +64,7 @@ class Grid:
                 face.v = 0
             else:
                 face.v = face.v / face.r
+
         self.rf = np.vectorize(divide_r)
 
     def clear_faces(self):
