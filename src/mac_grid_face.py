@@ -10,9 +10,11 @@ class Grid_Face:
         and v is the velocity perpendicular to the face (scalar/float)"""
         self.v = v
         self.s = s
+        self.v_c = 0
         self.r = 0
         self.up = up_grid
         self.down = down_grid
+
 
     def is_undefined(self):
         if self.up is None or self.down is None:

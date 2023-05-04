@@ -1,6 +1,7 @@
 import numpy as np
 import Grid
 import particle
+import copy
 
 num_cells = 3
 cell_size = 1
@@ -151,8 +152,16 @@ def r_divide():
         r_divide_face(p.pos, np.array([cell_size / 2, 0, cell_size / 2]), grid.y_grid_faces)
         r_divide_face(p.pos, np.array([cell_size / 2, cell_size / 2, 0]), grid.z_grid_faces)
 
+def copy_face(faces):
+    return copy.deepcopy(faces)
+
+def subtract_grids(o, c):
+    temp = o.v
+    temp2 = c.v
+    o.v = o.v - c.v
 
 def main():
+    np.vectorize(subtract_grids, signature='(i,j,k),(i,j,k)->()')
     particle_to_grid(particles[0])
     particle_to_grid(particles[1])
     r_divide()
@@ -164,6 +173,10 @@ def main():
     particle_to_grid(particles[0])
     force_incompression()
     print(grid_to_particle(particles[0]))
+    x_copy = copy_face(grid.x_grid_faces)
+    print(x_copy[0, 0, 0].v)
+    x_copy[0, 0, 0].v = 1
+    print(x_copy[0, 0, 0].v)
 
 
 if __name__ == "__main__":

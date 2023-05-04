@@ -8,3 +8,7 @@ class Particle:
         self.vel = np.array([v_x, v_y, v_z])
         self.m = 1
         self.grid = None
+
+    #def __sub__(self, other):
+    #    self.vel += other.vel
+    #    return self

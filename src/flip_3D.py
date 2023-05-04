@@ -8,6 +8,7 @@ import particle
 import grid_cell
 import mac_grid_face
 import Grid
+import copy
 
 n_steps = 10
 max_particles = 100
@@ -34,15 +35,15 @@ particles = []  # [particle.Particle(20.0 + 10 * i, 50.0, 50.0, 0.0, 0.0, 0.0) f
 for i in range(10):
     for j in range(10):
         for k in range(10):
-            particles.append(particle.Particle(7.5 + 1 * i, 10.5 + 1 * j, 7.5 + 1 * k, 0.0, -20.0, 0.0))
+            particles.append(particle.Particle(7.5 + 1 * i, 10.5 + 1 * j, 7.5 + 1 * k, 0.0, -10.0, 0.0))
 for i in range(10):
     for j in range(10):
         for k in range(10):
-            particles.append(particle.Particle(7.5 + 1 * i, 10.0 + 1 * j, 7.0 + 1 * k, 0.0, -20.0, 0.0))
+            particles.append(particle.Particle(7.5 + 1 * i, 10.0 + 1 * j, 7.0 + 1 * k, 0.0, -10.0, 0.0))
 for i in range(10):
     for j in range(10):
         for k in range(10):
-            particles.append(particle.Particle(7.0 + 1 * i, 10.0 + 1 * j, 7.5 + 1 * k, 0.0, -20.0, 0.0))
+            particles.append(particle.Particle(7.0 + 1 * i, 10.0 + 1 * j, 7.5 + 1 * k, 0.0, -10.0, 0.0))
 for i in range(10):
     for j in range(10):
         for k in range(10):
@@ -153,6 +154,7 @@ def r_divide():
                 pass
             else:
                 grid_faces[t].v /= grid_faces[t].r
+                grid_faces[t].v_c = grid_faces[t].v
                 grid_faces[t].r = 0
 
     for p in particles:
@@ -185,7 +187,7 @@ def particle_to_grid(p):
 def grid_to_particle(p):
     epsilon = 1e-8
 
-    def calc_weights_and_interp(pos, offset, grid_faces):
+    def calc_weights_and_interp(pos, offset, grid_faces, ti):
         q_indices = [(0, 0, 0), (0, 1, 0), (0, 1, 1), (0, 0, 1), (1, 0, 0), (1, 1, 0), (1, 1, 1), (1, 0, 1)]
         q1_i = ((pos - offset) // cell_size).astype(int)
         dxyz = pos - (q1_i * cell_size + offset)
@@ -202,16 +204,21 @@ def grid_to_particle(p):
         qp = sum(
             weights[i] * grid_faces[tuple(np.array(q1_i) + np.array(q_idx))].v for i, q_idx in enumerate(q_indices))
         total_weights = np.sum(weights)
+        qp_c = sum(
+            weights[i] * (grid_faces[tuple(np.array(q1_i) + np.array(q_idx))].v - grid_faces[tuple(np.array(q1_i) + np.array(q_idx))].v_c)  for i, q_idx in enumerate(q_indices))
         if total_weights != 0:
             qp /= total_weights
+            qp_c /= total_weights
         else:
             qp = 0
+            qp_c = 0
+        #if(qp_c != 0):
+        #    print("what")
+        return 0.1 * qp + 0.9 * (p.vel[ti] + qp_c)
 
-        return qp
-
-    qpx = calc_weights_and_interp(p.pos, np.array([0, cell_size / 2, cell_size / 2]), grid.x_grid_faces)
-    qpy = calc_weights_and_interp(p.pos, np.array([cell_size / 2, 0, cell_size / 2]), grid.y_grid_faces)
-    qpz = calc_weights_and_interp(p.pos, np.array([cell_size / 2, cell_size / 2, 0]), grid.z_grid_faces)
+    qpx = calc_weights_and_interp(p.pos, np.array([0, cell_size / 2, cell_size / 2]), grid.x_grid_faces, 0)
+    qpy = calc_weights_and_interp(p.pos, np.array([cell_size / 2, 0, cell_size / 2]), grid.y_grid_faces, 1)
+    qpz = calc_weights_and_interp(p.pos, np.array([cell_size / 2, cell_size / 2, 0]), grid.z_grid_faces, 2)
 
     return np.array([qpx, qpy, qpz])
 
@@ -304,6 +311,7 @@ def separate_particles():
                                 p_c.pos -= dir * (2 * particle_radius - l) / 2
 
 
+
 def main():
 
     position_sequence = []
@@ -311,7 +319,7 @@ def main():
     # grid_to_particle(particles[0])
     metadata = dict(title="sph_2d", artist="matlib", comment='')
     writer = FFMpegWriter(fps=15, metadata=metadata)
-    filename = "flip_test6.mp4"
+    filename = "flip_test2.mp4"
     plt.style.use("dark_background")
     fig = plt.figure()
     calculate_density()
@@ -352,11 +360,12 @@ def main():
                     print(p.pos)
 
             position_sequence.append(np.array(particle_positions))
-
             r_divide()
+
             #grid.r_div()
             calculate_density()
             force_incompression()
+
             sum_p = 0
             for p in particles:
                 sum_p += 1
