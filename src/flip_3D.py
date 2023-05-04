@@ -319,7 +319,7 @@ def main():
     # grid_to_particle(particles[0])
     metadata = dict(title="sph_2d", artist="matlib", comment='')
     writer = FFMpegWriter(fps=15, metadata=metadata)
-    filename = "flip_test2.mp4"
+    filename = "flip_test6_nobg.mp4"
     plt.style.use("dark_background")
     fig = plt.figure()
     calculate_density()
@@ -377,6 +377,17 @@ def main():
                     print(p.pos, "gtp")
             if t % plot_every == 0:
                 ax = plt.axes(projection="3d")
+
+                # make the panes transparent
+                ax.xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+                ax.yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+                ax.zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+                # make the grid lines transparent
+                ax.xaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+                ax.yaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+                ax.zaxis._axinfo["grid"]['color'] =  (1,1,1,0)
+                ax.set_axis_off()
+
                 ax.scatter(
                     [particles[i].pos[0] for i in range(len(particles))],
                     [particles[i].pos[2] for i in range(len(particles))],
